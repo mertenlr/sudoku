@@ -288,3 +288,66 @@ input[type="checkbox"] {
   border: 1px solid var(--bleistift);
   border-radius: 6px;
 }
+
+/* ===== Statistik ===== */
+#statistik {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--linie);
+}
+#statistik h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+#statistik-tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+#statistik-tabelle th,
+#statistik-tabelle td {
+  padding: 8px 0 8px 8px;
+  border-bottom: 1px solid var(--linie);
+  text-align: right;
+}
+#statistik-tabelle thead th {
+  font-weight: 700;
+  color: var(--papier);
+}
+#statistik-tabelle tbody th {
+  padding-left: 0;
+  text-align: left;
+  font-weight: 400;
+  color: var(--text-leise);
+}
+#statistik-tabelle td { color: var(--papier); }
+#statistik-tabelle td.leer { color: var(--text-leise); }
+
+#serie {
+  margin: 16px 0 0;
+  line-height: 1.5;
+}
+#serie strong { color: var(--bleistift); }
+
+.klein {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--text-leise);
+}
+#statistikLoeschen {
+  margin-left: 4px;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text-leise);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+#statistikLoeschen:hover { color: var(--papier); }
+
+/* Auf schmalen Handys etwas kleiner, damit die Tabelle nicht übersteht */
+@media (max-width: 400px) {
+  #statistik-tabelle { font-size: 14px; }
+}

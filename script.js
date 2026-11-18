@@ -265,11 +265,12 @@ function pruefeGewonnen() {
 
   if (eingabe === aktuellesRaetsel.loesung) {
     geloest = true;
-    zeigeGewonnen();
+    const neueBestzeit = trageErgebnisEin();   // nur hier, damit jedes Rätsel genau einmal zählt
+    zeigeGewonnen(neueBestzeit);
   }
 }
 
-function zeigeGewonnen() {
+function zeigeGewonnen(neueBestzeit) {
   clearInterval(timerId);
   spielfeld.classList.add("geloest");
   for (const z of zellen) {
@@ -284,7 +285,11 @@ function zeigeGewonnen() {
     fehlerText = "mit " + fehler + " Fehlern";
   }
 
-  hinweis.textContent = "";
+  if (neueBestzeit) {
+    hinweis.textContent = "Neue Bestzeit für " + stufenName(aktuelleStufe) + "!";
+  } else {
+    hinweis.textContent = "";
+  }
   meldung.textContent = "Gelöst in " + zeitAlsText() + ", " + fehlerText + ".";
 }
 
@@ -300,8 +305,13 @@ function starteTimer() {
 }
 
 function zeitAlsText() {
-  const min = Math.floor(sekunden / 60);
-  const sek = sekunden % 60;
+  return formatiereZeit(sekunden);
+}
+
+// Macht aus einer Anzahl Sekunden einen Text wie "04:07"
+function formatiereZeit(anzahlSekunden) {
+  const min = Math.floor(anzahlSekunden / 60);
+  const sek = anzahlSekunden % 60;
   return String(min).padStart(2, "0") + ":" + String(sek).padStart(2, "0");
 }
 
@@ -384,14 +394,179 @@ function stelleWiederHer(stand) {
   zeigeZeit();
 
   if (geloest) {
-    zeigeGewonnen();
+    zeigeGewonnen(false);   // schon früher gelöst: nicht noch einmal zählen
   } else {
     starteTimer();
   }
 }
 
 
+// ===== Statistik =====
+// Alles wird nur im Browser gespeichert (localStorage), ohne Konto und ohne Server.
+//
+// So sieht die gespeicherte Statistik aus:
+// {
+//   stufen: {
+//     leicht: { geloest: 3, ohneFehler: 2, gesamtSekunden: 540, bestzeit: 150 },
+//     mittel: { ... },
+//     schwer: { ... }
+//   },
+//   serie: 2,               // an wie vielen Tagen hintereinander gelöst
+//   laengsteSerie: 5,
+//   letzterTag: "2026-11-18" // wann zuletzt ein Rätsel gelöst wurde
+// }
+
+const STUFEN = ["leicht", "mittel", "schwer"];
+
+function leereStatistik() {
+  const statistik = { stufen: {}, serie: 0, laengsteSerie: 0, letzterTag: null };
+  for (const stufe of STUFEN) {
+    statistik.stufen[stufe] = { geloest: 0, ohneFehler: 0, gesamtSekunden: 0, bestzeit: null };
+  }
+  return statistik;
+}
+
+function ladeStatistik() {
+  try {
+    const text = localStorage.getItem("sudoku-statistik");
+    if (text !== null) {
+      return JSON.parse(text);
+    }
+  } catch (e) {
+    // Speicher nicht lesbar: einfach mit leerer Statistik weitermachen
+  }
+  return leereStatistik();
+}
+
+function speichereStatistik(statistik) {
+  try {
+    localStorage.setItem("sudoku-statistik", JSON.stringify(statistik));
+  } catch (e) {
+    // Speichern nicht möglich (z. B. privater Modus)
+  }
+}
+
+// Das heutige Datum als Text, z. B. "2026-11-18"
+function datumAlsText(datum) {
+  return datum.getFullYear() + "-" +
+         String(datum.getMonth() + 1).padStart(2, "0") + "-" +
+         String(datum.getDate()).padStart(2, "0");
+}
+
+function heute() {
+  return datumAlsText(new Date());
+}
+
+function gestern() {
+  const datum = new Date();
+  datum.setDate(datum.getDate() - 1);   // JavaScript rechnet Monatswechsel automatisch richtig
+  return datumAlsText(datum);
+}
+
+function stufenName(stufe) {
+  return stufe.charAt(0).toUpperCase() + stufe.slice(1);   // "mittel" → "Mittel"
+}
+
+// Wird beim Lösen aufgerufen. Gibt true zurück, wenn es eine neue Bestzeit ist.
+function trageErgebnisEin() {
+  const statistik = ladeStatistik();
+  const werte = statistik.stufen[aktuelleStufe];
+
+  werte.geloest++;
+  werte.gesamtSekunden += sekunden;
+  if (fehler === 0) {
+    werte.ohneFehler++;
+  }
+
+  let neueBestzeit = false;
+  if (werte.bestzeit === null || sekunden < werte.bestzeit) {
+    // Beim allerersten Lösen gibt es noch keine Bestzeit zu schlagen
+    neueBestzeit = werte.bestzeit !== null;
+    werte.bestzeit = sekunden;
+  }
+
+  // Serie: heute schon gezählt? Gestern gespielt? Sonst fängt sie neu an.
+  if (statistik.letzterTag !== heute()) {
+    if (statistik.letzterTag === gestern()) {
+      statistik.serie++;
+    } else {
+      statistik.serie = 1;
+    }
+    statistik.letzterTag = heute();
+  }
+  if (statistik.serie > statistik.laengsteSerie) {
+    statistik.laengsteSerie = statistik.serie;
+  }
+
+  speichereStatistik(statistik);
+  zeigeStatistik();
+  return neueBestzeit;
+}
+
+// Füllt die Tabelle und den Satz zur Serie
+function zeigeStatistik() {
+  const statistik = ladeStatistik();
+  const tbody = document.querySelector("#statistik-tabelle tbody");
+  tbody.innerHTML = "";   // alte Zeilen entfernen
+
+  // Jede Zeile: Beschriftung und eine Funktion, die den Wert für eine Stufe berechnet
+  const zeilen = [
+    ["Gelöst", function (w) { return String(w.geloest); }],
+    ["Bestzeit", function (w) {
+      return w.bestzeit === null ? "–" : formatiereZeit(w.bestzeit);
+    }],
+    ["Durchschnitt", function (w) {
+      return w.geloest === 0 ? "–" : formatiereZeit(Math.round(w.gesamtSekunden / w.geloest));
+    }],
+    ["Ohne Fehler", function (w) { return String(w.ohneFehler); }]
+  ];
+
+  for (const [beschriftung, berechne] of zeilen) {
+    const tr = document.createElement("tr");
+
+    const th = document.createElement("th");
+    th.scope = "row";
+    th.textContent = beschriftung;
+    tr.appendChild(th);
+
+    for (const stufe of STUFEN) {
+      const td = document.createElement("td");
+      td.textContent = berechne(statistik.stufen[stufe]);
+      if (td.textContent === "–" || td.textContent === "0") {
+        td.classList.add("leer");
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+
+  // Eine Serie zählt nur, wenn heute oder gestern zuletzt gelöst wurde
+  let aktuelleSerie = statistik.serie;
+  if (statistik.letzterTag !== heute() && statistik.letzterTag !== gestern()) {
+    aktuelleSerie = 0;
+  }
+
+  const serieText = document.getElementById("serie");
+  if (aktuelleSerie === 0) {
+    serieText.textContent = "Löse heute ein Rätsel, um eine Serie zu starten.";
+  } else {
+    const tage = aktuelleSerie === 1 ? "1 Tag" : aktuelleSerie + " Tage";
+    serieText.innerHTML = "Aktuelle Serie: <strong>" + tage + "</strong> in Folge. " +
+                          "Längste Serie: " + statistik.laengsteSerie + " " +
+                          (statistik.laengsteSerie === 1 ? "Tag" : "Tage") + ".";
+  }
+}
+
+document.getElementById("statistikLoeschen").addEventListener("click", function () {
+  if (confirm("Willst du deine Statistik wirklich löschen? Das lässt sich nicht rückgängig machen.")) {
+    speichereStatistik(leereStatistik());
+    zeigeStatistik();
+  }
+});
+
+
 // ===== Start =====
+zeigeStatistik();
 document.getElementById("neuButton").addEventListener("click", neuesRaetsel);
 document.getElementById("pruefenButton").addEventListener("click", pruefen);
 
