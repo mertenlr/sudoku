@@ -4,108 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mein Sudoku</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: #f4f4f4;
-    }
-    #spielfeld {
-      display: grid;
-      grid-template-columns: repeat(9, 45px);
-      border: 3px solid #333;
-    }
-    .zelle {
-      width: 45px;
-      height: 45px;
-      text-align: center;
-      font-size: 22px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-      background: white;
-        color: black; 
-    }
-    .vorgegeben {
-  color: #222;
-  font-weight: bold;
-  cursor: default;
-    }
-    .blau { background: #e3f2fd; }
-    .rand-rechts { border-right: 3px solid #333; }
-    .rand-unten  { border-bottom: 3px solid #333; }
-    .falsch {
-    color: #d32f2f;
-    background: #ffebee;
-    }
-    #meldung {
-  font-size: 24px;
-  font-weight: bold;
-  color: #2e7d32;
-  }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>Sudoku</h1>
-  <div id="spielfeld"></div>
+
+  <div id="steuerung">
+    <select id="schwierigkeit">
+      <option value="leicht">Leicht</option>
+      <option value="mittel">Mittel</option>
+      <option value="schwer">Schwer</option>
+    </select>
+    <button id="neuButton">Neues Rätsel</button>
+  </div>
+
+  <label>
+    <input type="checkbox" id="fehlerSchalter" checked> Fehler anzeigen
+  </label>
+
+  <div id="status">
+    <span id="zeit">⏱ 00:00</span>
+    <span id="fehler">Fehler: 0</span>
+  </div>
+
+  <div id="spielfeld" class="fehler-an"></div>
+  <div id="zahlenleiste"></div>
   <p id="meldung"></p>
 
-  <script>
-    const raetsel = "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
-    const loesung = "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
-    const spielfeld = document.getElementById("spielfeld");
-
-    for (let i = 0; i < 81; i++) {
-      const zelle = document.createElement("input");
-      zelle.className = "zelle";
-      zelle.maxLength = 1;
-      zelle.inputMode = "numeric";
-
-      const spalte = i % 9;
-      const zeile = Math.floor(i / 9);
-
-      if (spalte === 2 || spalte === 5) zelle.classList.add("rand-rechts");
-      if (zeile === 2 || zeile === 5) zelle.classList.add("rand-unten");
-
-      const blockZeile = Math.floor(zeile / 3);     // ⬅️ neu
-      const blockSpalte = Math.floor(spalte / 3);   // ⬅️ neu
-      if ((blockZeile + blockSpalte) % 2 === 0) zelle.classList.add("blau"); 
-      
-      const zahl = raetsel[i];
-      if (zahl !== "0") {
-        zelle.value = zahl;
-        zelle.readOnly = true;
-        zelle.classList.add("vorgegeben");
-      }
-
-      zelle.addEventListener("input", function () {
-        if (!"123456789".includes(zelle.value)) {
-          zelle.value = "";
-        }
-
-        if (zelle.value !== "" && zelle.value !== loesung[i]) {
-          zelle.classList.add("falsch");
-        } else {
-          zelle.classList.remove("falsch");
-        }
-       pruefeGewonnen();
-      });
-
-      spielfeld.appendChild(zelle);
-    }
-    function pruefeGewonnen() {
-  const alleZellen = document.querySelectorAll(".zelle");
-  let eingabe = "";
-
-  for (const z of alleZellen) {
-    eingabe += z.value;
-  }
-
-  if (eingabe === loesung) {
-    document.getElementById("meldung").textContent = "🎉 Geschafft! Du hast das Sudoku gelöst!";
-  }
-}
-  </script>
+  <!-- Reihenfolge ist wichtig: erst die Rätsel, dann das Spiel -->
+  <script src="raetsel.js"></script>
+  <script src="script.js"></script>
 </body>
-</html> 
+</html>

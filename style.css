@@ -1,0 +1,106 @@
+/* Größe eines Feldes: 45px, auf kleinen Handys aber höchstens 10 % der Bildschirmbreite */
+:root {
+  --zelle: min(45px, 10vw);
+  --breite: calc(var(--zelle) * 9 + 6px);
+}
+
+body {
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f4f4f4;
+}
+
+/* ===== Steuerung oben ===== */
+#steuerung {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+select, button {
+  font-size: 16px;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+button {
+  background: #1565c0;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+button:hover { background: #0d47a1; }
+label {
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+/* ===== Zeit und Fehler ===== */
+#status {
+  display: flex;
+  justify-content: space-between;
+  width: var(--breite);
+  margin-bottom: 6px;
+  color: #555;
+}
+
+/* ===== Spielfeld ===== */
+#spielfeld {
+  display: grid;
+  grid-template-columns: repeat(9, var(--zelle));
+  border: 3px solid #333;
+}
+.zelle {
+  width: var(--zelle);
+  height: var(--zelle);
+  padding: 0;
+  text-align: center;
+  font-size: calc(var(--zelle) * 0.5);
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  background: white;
+  color: black;
+  border-radius: 0;
+}
+.blau { background: #e3f2fd; }
+.rand-rechts { border-right: 3px solid #333; }
+.rand-unten  { border-bottom: 3px solid #333; }
+.vorgegeben {
+  font-weight: bold;
+  cursor: default;
+}
+.hervorgehoben { background: #bbdefb; }
+.gleich { background: #64b5f6; }
+.ausgewaehlt {
+  outline: 3px solid #0d47a1;
+  outline-offset: -3px;
+}
+.fehler-an .falsch {
+  color: #d32f2f;
+  background: #ffebee;
+}
+
+/* ===== Zahlenleiste ===== */
+#zahlenleiste {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  width: var(--breite);
+  margin-top: 12px;
+}
+.taste {
+  background: white;
+  color: #0d47a1;
+  border: 1px solid #90caf9;
+  font-size: 22px;
+  padding: 8px 0;
+}
+.taste:hover { background: #e3f2fd; }
+
+/* ===== Gewinnmeldung ===== */
+#meldung {
+  font-size: 24px;
+  font-weight: bold;
+  color: #2e7d32;
+  text-align: center;
+}
