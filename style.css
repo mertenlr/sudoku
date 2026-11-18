@@ -351,3 +351,45 @@ input[type="checkbox"] {
 @media (max-width: 400px) {
   #statistik-tabelle { font-size: 14px; }
 }
+
+/* ===== Fußzeile ===== */
+#seitenfuss {
+  display: flex;
+  gap: 20px;
+  margin-top: 48px;
+  padding: 16px 0 8px;
+  border-top: 1px solid var(--linie);
+  font-size: 14px;
+}
+#seitenfuss a,
+.rechtsseite a {
+  color: var(--text-leise);
+  text-underline-offset: 3px;
+}
+#seitenfuss a:hover,
+.rechtsseite a:hover { color: var(--papier); }
+
+/* ===== Impressum und Datenschutz ===== */
+.rechtsseite {
+  width: 100%;
+  max-width: 640px;
+  line-height: 1.6;
+}
+.rechtsseite h1 {
+  margin: 8px 0 4px;
+}
+.rechtsseite h2 {
+  margin: 32px 0 8px;
+  font-size: 19px;
+  font-weight: 700;
+}
+.rechtsseite p,
+.rechtsseite ul {
+  margin: 0 0 12px;
+  color: var(--text-leise);
+}
+.rechtsseite ul { padding-left: 1.2em; }
+.rechtsseite li { margin-bottom: 6px; }
+.rechtsseite li::marker { color: var(--bleistift); }
+.rechtsseite .stand { font-size: 14px; }
+.rechtsseite .zurueck { font-size: 15px; }
