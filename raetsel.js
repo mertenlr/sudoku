@@ -1,25 +1,168 @@
-// Alle Rätsel, sortiert nach Schwierigkeit.
-// Jedes Rätsel: 81 Ziffern Zeile für Zeile, 0 = leeres Feld.
-const raetselListe = {
-  leicht: [
-    { raetsel: "800009003490800675350000981010082460024016809600004100046070398000000710003000526", loesung: "867159243491823675352467981915382467724516839638794152546271398289635714173948526" },
-    { raetsel: "014290056005007120002010794000000071031000560400560008150079040000150387047326000", loesung: "714293856695487123382615794568932471231748569479561238153879642926154387847326915" },
-    { raetsel: "030000027600001089087520040460000010700084305009207468010003076590702801070009054", loesung: "135498627642371589987526143468935712721684395359217468214853976596742831873169254" },
-    { raetsel: "410709200035800060670523000580302000063901005920600017300007001107080500000130972", loesung: "418769253235814769679523148581372496763941825924658317352497681197286534846135972" },
-    { raetsel: "108362040040087061500400200200706190000819002809000000000948025907120634005003010", loesung: "198362547342587961576491283254736198763819452819254376631948725987125634425673819" },
-  ],
-  mittel: [
-    { raetsel: "060000040000100800000040920120000007753000004049080315300001500015078032200509000", loesung: "562893741497162853831745926128354697753916284649287315386421579915678432274539168" },
-    { raetsel: "060594010501087060087100900052000046030002008040065030000029000009000003370600000", loesung: "263594817591287364487136952952813746136472598748965231814329675629751483375648129" },
-    { raetsel: "030090057000000294000804010087020349600079000203480100005000060301700020060000008", loesung: "436291857158637294972854613587126349614379582293485176825943761341768925769512438" },
-    { raetsel: "006000201070010405900040830007004500090053062050080000480001629002009000009020100", loesung: "546938271378612495921547836167294583894153762253786914485371629712469358639825147" },
-    { raetsel: "429705000307006090010420000900050000000280600000000123800600007205100000190078042", loesung: "429735861357816294618429735962351478731284659584967123843692517275143986196578342" },
-  ],
-  schwer: [
-    { raetsel: "090005402700001000000000300902000050080500060000080200060007003000102047307006500", loesung: "698375412735241986421968375972613854183524769546789231264857193859132647317496528" },
-    { raetsel: "000073000005000100903100006490800001008520090050006004020000070000740009840000000", loesung: "164273958285469137973158246496837521718524693352916784629381475531742869847695312" },
-    { raetsel: "006004000504020006090000200000000600063007050170006430900700040002005000410000500", loesung: "326874915584129376791653284849531627263947851175286439958762143632415798417398562" },
-    { raetsel: "000204000000301900000900007700530100082000003040009000210400050060005000500700480", loesung: "973264815658371924421958367796532148182647593345819276217483659864195732539726481" },
-    { raetsel: "000008500003060482000340071000902060050080010600150000400000000000005720080070000", loesung: "746218539913567482825349671174932865259786314638154297497823156361495728582671943" },
-  ],
+// =========================================================
+// raetsel.js: erzeugt neue Sudoku-Rätsel
+//
+// So funktioniert der Generator:
+// 1. Er füllt ein leeres Gitter zufällig und vollständig nach den
+//    Sudoku-Regeln aus. Das ist die Lösung.
+// 2. Dann nimmt er in zufälliger Reihenfolge Zahlen heraus. Nach jedem
+//    Herausnehmen prüft er, ob das Rätsel immer noch genau EINE Lösung hat.
+//    Hätte es plötzlich mehrere, legt er die Zahl wieder zurück.
+// 3. Er hört auf, sobald nur noch so viele Zahlen übrig sind, wie die
+//    Schwierigkeitsstufe vorgibt.
+//
+// Das Gitter ist ein Array mit 81 Zahlen, Zeile für Zeile, 0 = leeres Feld.
+// =========================================================
+
+// Wie viele Zahlen pro Stufe am Anfang im Gitter stehen
+const VORGABEN = {
+  leicht: 40,
+  mittel: 32,
+  schwer: 26
 };
+
+
+// Bringt die Einträge einer Liste in eine zufällige Reihenfolge
+// (Fisher-Yates-Verfahren: jeder Eintrag tauscht mit einem zufälligen davor)
+function mische(liste) {
+  for (let i = liste.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = liste[i];
+    liste[i] = liste[j];
+    liste[j] = tmp;
+  }
+  return liste;
+}
+
+
+// Welche Zahlen dürfen in Feld i stehen, ohne gegen die Regeln zu verstoßen?
+function moeglicheZahlen(gitter, i) {
+  const zeile = Math.floor(i / 9);
+  const spalte = i % 9;
+  const blockStart = Math.floor(zeile / 3) * 27 + Math.floor(spalte / 3) * 3;
+
+  // belegt[z] wird true, wenn die Zahl z in Zeile, Spalte oder Block schon vorkommt
+  const belegt = [false, false, false, false, false, false, false, false, false, false];
+  for (let k = 0; k < 9; k++) {
+    belegt[gitter[zeile * 9 + k]] = true;                               // gleiche Zeile
+    belegt[gitter[k * 9 + spalte]] = true;                              // gleiche Spalte
+    belegt[gitter[blockStart + Math.floor(k / 3) * 9 + (k % 3)]] = true; // gleicher Block
+  }
+
+  const frei = [];
+  for (let z = 1; z <= 9; z++) {
+    if (!belegt[z]) {
+      frei.push(z);
+    }
+  }
+  return frei;
+}
+
+
+// Sucht das leere Feld mit den wenigsten Möglichkeiten.
+// Dort anzufangen macht die Suche viel schneller, so wie ein Mensch auch
+// zuerst die Felder ausfüllt, bei denen nur noch wenig in Frage kommt.
+// Gibt null zurück, wenn kein Feld mehr leer ist.
+function besteLuecke(gitter) {
+  let beste = null;
+
+  for (let i = 0; i < 81; i++) {
+    if (gitter[i] === 0) {
+      const zahlen = moeglicheZahlen(gitter, i);
+      if (beste === null || zahlen.length < beste.zahlen.length) {
+        beste = { index: i, zahlen: zahlen };
+        if (zahlen.length <= 1) {
+          break;   // besser wird es nicht
+        }
+      }
+    }
+  }
+  return beste;
+}
+
+
+// Füllt das Gitter zufällig komplett aus (Backtracking):
+// Zahl probieren, weitermachen, und wenn es später nicht aufgeht,
+// zurückgehen und die nächste Zahl probieren.
+function fuelle(gitter) {
+  const luecke = besteLuecke(gitter);
+  if (luecke === null) {
+    return true;   // alles voll, fertig
+  }
+
+  for (const zahl of mische(luecke.zahlen)) {
+    gitter[luecke.index] = zahl;
+    if (fuelle(gitter)) {
+      return true;
+    }
+  }
+
+  gitter[luecke.index] = 0;   // keine Zahl hat gepasst, einen Schritt zurück
+  return false;
+}
+
+
+// Zählt die Lösungen eines Rätsels, hört aber bei "grenze" auf.
+// Wir wollen nur wissen: genau eine Lösung oder mehr? Deshalb reicht grenze = 2.
+function zaehleLoesungen(gitter, grenze) {
+  const luecke = besteLuecke(gitter);
+  if (luecke === null) {
+    return 1;   // komplett gefüllt: eine Lösung gefunden
+  }
+
+  let anzahl = 0;
+  for (const zahl of luecke.zahlen) {
+    gitter[luecke.index] = zahl;
+    anzahl += zaehleLoesungen(gitter, grenze - anzahl);
+    if (anzahl >= grenze) {
+      break;
+    }
+  }
+
+  gitter[luecke.index] = 0;
+  return anzahl;
+}
+
+
+// Erzeugt ein neues Rätsel für die Stufe "leicht", "mittel" oder "schwer".
+// Gibt ein Objekt zurück: { raetsel: "5300700...", loesung: "5346789..." }
+function erzeugeRaetsel(stufe) {
+  const ziel = VORGABEN[stufe];
+
+  // Manchmal lassen sich nicht genug Zahlen entfernen, ohne dass das Rätsel
+  // mehrdeutig wird. Dann einfach mit einem neuen Gitter noch einmal versuchen.
+  while (true) {
+    const loesung = new Array(81).fill(0);
+    fuelle(loesung);
+
+    const raetsel = loesung.slice();   // Kopie, aus der wir Zahlen entfernen
+    let uebrig = 81;
+
+    const reihenfolge = [];
+    for (let i = 0; i < 81; i++) {
+      reihenfolge.push(i);
+    }
+    mische(reihenfolge);
+
+    for (const i of reihenfolge) {
+      if (uebrig === ziel) {
+        break;
+      }
+
+      const gemerkt = raetsel[i];
+      raetsel[i] = 0;
+
+      if (zaehleLoesungen(raetsel.slice(), 2) === 1) {
+        uebrig--;                // weiterhin eindeutig, Zahl bleibt weg
+      } else {
+        raetsel[i] = gemerkt;    // sonst wäre es mehrdeutig, Zahl zurücklegen
+      }
+    }
+
+    if (uebrig === ziel) {
+      return {
+        raetsel: raetsel.join(""),
+        loesung: loesung.join("")
+      };
+    }
+  }
+}

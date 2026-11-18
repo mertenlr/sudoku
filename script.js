@@ -201,16 +201,22 @@ function markiere(auswahl) {
 
 // ===== Rätsel laden =====
 function neuesRaetsel() {
-  const liste = raetselListe[aktuelleStufe];
+  clearInterval(timerId);
+  meldung.textContent = "";
+  hinweis.textContent = "Neues Rätsel wird erstellt …";
 
-  let auswahl;
-  do {
-    auswahl = liste[Math.floor(Math.random() * liste.length)];
-  } while (liste.length > 1 && aktuellesRaetsel !== null && auswahl.raetsel === aktuellesRaetsel.raetsel);
-  aktuellesRaetsel = auswahl;
+  // Kurz warten, damit der Browser den Hinweis anzeigen kann, bevor er rechnet.
+  // Schwere Rätsel brauchen manchmal einen Moment.
+  setTimeout(function () {
+    aktuellesRaetsel = erzeugeRaetsel(aktuelleStufe);   // kommt aus raetsel.js
+    starteRaetsel();
+  }, 20);
+}
 
+// Setzt alles für ein frisch erzeugtes Rätsel zurück
+function starteRaetsel() {
   // Neues Rätsel: noch keine eigenen Eingaben, also nur die Vorgaben anzeigen
-  zeigeRaetsel(auswahl.raetsel);
+  zeigeRaetsel(aktuellesRaetsel.raetsel);
 
   fehler = 0;
   sekunden = 0;
