@@ -1,106 +1,290 @@
-/* Größe eines Feldes: 45px, auf kleinen Handys aber höchstens 10 % der Bildschirmbreite */
-:root {
-  --zelle: min(45px, 10vw);
-  --breite: calc(var(--zelle) * 9 + 6px);
+/* =========================================================
+   Farben und Größen an einer Stelle
+   Idee: Rätseln am Abend. Gedruckte Zahlen in Papierweiß,
+   deine eigenen Zahlen handschriftlich wie mit Bleistift,
+   in warmem Lampenlicht-Gelb.
+   ========================================================= */
+/* ===== Schriften (liegen im Ordner fonts, Lizenz: SIL Open Font License) ===== */
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/atkinson-hyperlegible-400.woff2") format("woff2");
 }
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  font-weight: 700;
+  font-display: swap;
+  src: url("fonts/atkinson-hyperlegible-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Patrick Hand";
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/patrick-hand.woff2") format("woff2");
+}
+
+:root {
+  --nacht: #1c1f33;         /* Seitenhintergrund */
+  --brett: #262a44;          /* Felder */
+  --brett-block: #212439;    /* jeder zweite 3×3-Block, ganz leicht dunkler */
+  --linie: #383e5e;          /* dünne Linien */
+  --blocklinie: #8a8fb0;     /* dicke Linien */
+  --papier: #ebe7dc;         /* gedruckte Zahlen und Text */
+  --text-leise: #9da1bd;     /* Nebentext */
+  --bleistift: #f2b84b;      /* deine Zahlen */
+  --markiert: #2e3354;       /* Zeile, Spalte, Block */
+  --gleich: #48416f;         /* gleiche Zahlen */
+  --auswahl: #f2b84b;        /* Rahmen ums gewählte Feld */
+  --konflikt: #ff8a7a;
+  --konflikt-grund: #43293a;
+  --geschafft: #a6d9a0;
+
+  --zelle: min(46px, calc((100vw - 40px) / 9));
+  --breite: calc(var(--zelle) * 9 + 4px);
+}
+
+* { box-sizing: border-box; }
 
 body {
-  font-family: sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: #f4f4f4;
-}
-
-/* ===== Steuerung oben ===== */
-#steuerung {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-select, button {
+  margin: 0;
+  padding: 32px 16px;
+  min-height: 100vh;
+  background: var(--nacht);
+  color: var(--papier);
+  font-family: "Atkinson Hyperlegible", sans-serif;
   font-size: 16px;
-  padding: 6px 12px;
-  border-radius: 4px;
-}
-button {
-  background: #1565c0;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-button:hover { background: #0d47a1; }
-label {
-  margin-bottom: 12px;
-  cursor: pointer;
+  display: flex;
+  justify-content: center;
 }
 
-/* ===== Zeit und Fehler ===== */
-#status {
+#spiel { width: var(--breite); }
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--bleistift);
+  outline-offset: 2px;
+}
+
+/* ===== Kopf: Titel links, Zeit rechts ===== */
+#kopf {
   display: flex;
   justify-content: space-between;
-  width: var(--breite);
-  margin-bottom: 6px;
-  color: #555;
+  align-items: baseline;
+  margin-bottom: 16px;
 }
+h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+#zeit {
+  font-size: 20px;
+  color: var(--text-leise);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Schwierigkeit und neues Rätsel ===== */
+#steuerung {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+#stufen { display: flex; gap: 4px; }
+.stufe,
+#neuButton {
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  color: var(--text-leise);
+}
+.stufe:hover,
+#neuButton:hover { color: var(--papier); }
+.stufe.aktiv {
+  color: var(--papier);
+  text-decoration: underline;
+  text-decoration-color: var(--bleistift);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+#neuButton { padding-right: 0; }
 
 /* ===== Spielfeld ===== */
 #spielfeld {
   display: grid;
   grid-template-columns: repeat(9, var(--zelle));
-  border: 3px solid #333;
+  border: 2px solid var(--blocklinie);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.4s;
 }
+#spielfeld.geloest { border-color: var(--geschafft); }
+
 .zelle {
   width: var(--zelle);
   height: var(--zelle);
   padding: 0;
-  text-align: center;
-  font-size: calc(var(--zelle) * 0.5);
-  border: 1px solid #ccc;
-  box-sizing: border-box;
-  background: white;
-  color: black;
+  border: none;
+  border-right: 1px solid var(--linie);
+  border-bottom: 1px solid var(--linie);
   border-radius: 0;
+  background: var(--brett);
+  color: var(--bleistift);
+  font-family: "Patrick Hand", cursive;
+  font-size: calc(var(--zelle) * 0.62);
+  text-align: center;
+  caret-color: transparent;
+  cursor: pointer;
 }
-.blau { background: #e3f2fd; }
-.rand-rechts { border-right: 3px solid #333; }
-.rand-unten  { border-bottom: 3px solid #333; }
+.zelle:focus { outline: none; }
+.zelle:nth-child(9n) { border-right: none; }        /* letzte Spalte: Außenrahmen reicht */
+.zelle:nth-child(n+73) { border-bottom: none; }     /* letzte Zeile */
+.blau { background: var(--brett-block); }
+.rand-rechts { border-right: 2px solid var(--blocklinie); }
+.rand-unten  { border-bottom: 2px solid var(--blocklinie); }
+
 .vorgegeben {
-  font-weight: bold;
-  cursor: default;
-}
-.hervorgehoben { background: #bbdefb; }
-.gleich { background: #64b5f6; }
-.ausgewaehlt {
-  outline: 3px solid #0d47a1;
-  outline-offset: -3px;
-}
-.fehler-an .falsch {
-  color: #d32f2f;
-  background: #ffebee;
+  color: var(--papier);
+  font-family: "Atkinson Hyperlegible", sans-serif;
+  font-weight: 700;
+  font-size: calc(var(--zelle) * 0.48);
 }
 
-/* ===== Zahlenleiste ===== */
+.hervorgehoben { background: var(--markiert); }
+.gleich { background: var(--gleich); }
+.zelle.ausgewaehlt {
+  outline: 2px solid var(--auswahl);
+  outline-offset: -2px;
+}
+
+/* Rot: Regelverstöße (wenn eingeschaltet) und falsche Zahlen nach dem Prüfen */
+.konflikte-an .konflikt,
+.falsch {
+  color: var(--konflikt);
+  background: var(--konflikt-grund);
+}
+
+/* ===== Zahlenleiste: jede Taste genau so breit wie eine Spalte ===== */
 #zahlenleiste {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-  width: var(--breite);
-  margin-top: 12px;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+  margin-top: 16px;
 }
 .taste {
-  background: white;
-  color: #0d47a1;
-  border: 1px solid #90caf9;
-  font-size: 22px;
-  padding: 8px 0;
+  height: calc(var(--zelle) * 1.15);
+  background: var(--brett);
+  border: 1px solid var(--linie);
+  border-radius: 6px;
+  font-size: calc(var(--zelle) * 0.46);
+  font-weight: 700;
 }
-.taste:hover { background: #e3f2fd; }
+.taste:hover { border-color: var(--blocklinie); }
+.taste:active { background: var(--markiert); }
 
-/* ===== Gewinnmeldung ===== */
+/* ===== Radieren und Prüfen ===== */
+#aktionen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 4px;
+}
+#radierer,
+#pruefenButton {
+  padding: 10px;
+  background: none;
+  border: 1px solid var(--linie);
+  border-radius: 6px;
+}
+#radierer:hover,
+#pruefenButton:hover { border-color: var(--blocklinie); }
+#pruefenButton {
+  background: var(--bleistift);
+  border-color: var(--bleistift);
+  color: var(--nacht);
+  font-weight: 700;
+}
+#pruefenButton:hover { background: #f6c86b; border-color: #f6c86b; }
+
+/* ===== Fehler und Konflikt-Schalter ===== */
+#fuss {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  color: var(--text-leise);
+  font-size: 15px;
+}
+label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--bleistift);
+}
+
+/* ===== Hinweise ===== */
+#hinweis {
+  min-height: 1.4em;
+  margin: 16px 0 0;
+  color: var(--text-leise);
+}
 #meldung {
-  font-size: 24px;
-  font-weight: bold;
-  color: #2e7d32;
-  text-align: center;
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--geschafft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #spielfeld { transition: none; }
+}
+
+/* ===== Text unter dem Spiel ===== */
+#text {
+  margin-top: 56px;
+  line-height: 1.6;
+}
+#text section {
+  padding-top: 28px;
+  margin-top: 28px;
+  border-top: 1px solid var(--linie);
+}
+#text h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+#text h3 {
+  margin: 20px 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+}
+#text p {
+  margin: 0 0 12px;
+  color: var(--text-leise);
+}
+#text ul {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--text-leise);
+}
+#text li { margin-bottom: 8px; }
+#text li::marker { color: var(--bleistift); }
+
+.hinweis-kasten {
+  padding: 12px;
+  border: 1px solid var(--bleistift);
+  border-radius: 6px;
 }

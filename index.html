@@ -3,33 +3,130 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mein Sudoku</title>
+
+  <!-- Für Suchmaschinen: Titel und Beschreibung erscheinen so in den Suchergebnissen -->
+  <title>Sudoku online spielen – kostenlos und ohne Anmeldung</title>
+  <meta name="description" content="Kostenloses Sudoku im Browser: drei Schwierigkeitsstufen, Prüfen-Funktion und automatisches Speichern. Ohne Anmeldung, auch auf dem Handy.">
+
+  <!-- Die "offizielle" Adresse dieser Seite -->
+  <link rel="canonical" href="https://onlinesudokus.de/">
+
+  <!-- Für Vorschauen, wenn jemand den Link in WhatsApp, Discord & Co. teilt -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Sudoku online spielen">
+  <meta property="og:description" content="Kostenloses Sudoku im Browser, mit drei Schwierigkeitsstufen. Ohne Anmeldung, auch auf dem Handy.">
+  <meta property="og:locale" content="de_DE">
+  <meta property="og:url" content="https://onlinesudokus.de/">
+  <meta property="og:image" content="https://onlinesudokus.de/vorschau.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Sudoku-Spielfeld in Nachtblau mit gelben, handschriftlichen Zahlen">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Farbe der Browserleiste auf dem Handy und Symbol im Tab -->
+  <meta name="theme-color" content="#1c1f33">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+  <!-- Schriften liegen im eigenen Ordner, damit sie schneller laden -->
+  <link rel="preload" href="fonts/atkinson-hyperlegible-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/patrick-hand.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
+
+  <!-- Strukturierte Daten: erklären Google maschinenlesbar, was diese Seite ist -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Sudoku",
+    "url": "https://onlinesudokus.de/",
+    "description": "Kostenloses Sudoku im Browser mit drei Schwierigkeitsstufen.",
+    "applicationCategory": "GameApplication",
+    "operatingSystem": "Alle (läuft im Browser)",
+    "inLanguage": "de",
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+  }
+  </script>
 </head>
 <body>
-  <h1>Sudoku</h1>
+  <main id="spiel">
 
-  <div id="steuerung">
-    <select id="schwierigkeit">
-      <option value="leicht">Leicht</option>
-      <option value="mittel">Mittel</option>
-      <option value="schwer">Schwer</option>
-    </select>
-    <button id="neuButton">Neues Rätsel</button>
-  </div>
+    <header id="kopf">
+      <h1>Sudoku</h1>
+      <span id="zeit">00:00</span>
+    </header>
 
-  <label>
-    <input type="checkbox" id="fehlerSchalter" checked> Fehler anzeigen
-  </label>
+    <nav id="steuerung" aria-label="Schwierigkeit">
+      <div id="stufen">
+        <button class="stufe" data-stufe="leicht">Leicht</button>
+        <button class="stufe" data-stufe="mittel">Mittel</button>
+        <button class="stufe" data-stufe="schwer">Schwer</button>
+      </div>
+      <button id="neuButton">Neues Rätsel</button>
+    </nav>
 
-  <div id="status">
-    <span id="zeit">⏱ 00:00</span>
-    <span id="fehler">Fehler: 0</span>
-  </div>
+    <noscript>
+      <p class="hinweis-kasten">Für das Spiel muss JavaScript in deinem Browser eingeschaltet sein.</p>
+    </noscript>
 
-  <div id="spielfeld" class="fehler-an"></div>
-  <div id="zahlenleiste"></div>
-  <p id="meldung"></p>
+    <div id="spielfeld" class="konflikte-an" aria-label="Sudoku-Spielfeld"></div>
+
+    <div id="zahlenleiste" aria-label="Zahlen eingeben"></div>
+
+    <div id="aktionen">
+      <button id="radierer">Radieren</button>
+      <button id="pruefenButton">Prüfen</button>
+    </div>
+
+    <div id="fuss">
+      <span id="fehler">Fehler: 0</span>
+      <label>
+        <input type="checkbox" id="konfliktSchalter" checked> Konflikte zeigen
+      </label>
+    </div>
+
+    <p id="hinweis"></p>
+    <p id="meldung"></p>
+
+
+    <!-- Text für Menschen und Suchmaschinen -->
+    <article id="text">
+
+      <section>
+        <h2>So wird gespielt</h2>
+        <p>Fülle das Gitter so aus, dass in jeder Zeile, jeder Spalte und jedem der neun 3×3-Blöcke die Zahlen 1 bis 9 genau einmal vorkommen. Die fett gedruckten Zahlen sind vorgegeben und lassen sich nicht ändern.</p>
+        <ul>
+          <li>Tippe auf ein leeres Feld und dann auf eine Zahl unter dem Spielfeld. Am Computer kannst du die Zahl auch direkt eintippen.</li>
+          <li>Steht eine Zahl doppelt in einer Zeile, Spalte oder einem Block, werden beide Felder rot. Unter „Konflikte zeigen“ lässt sich das abschalten.</li>
+          <li>„Prüfen“ zeigt dir, welche deiner Zahlen nicht zur Lösung passen. Jede gefundene falsche Zahl zählt als Fehler.</li>
+          <li>Dein Spielstand wird im Browser gespeichert. Du kannst die Seite schließen und später weitermachen.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Tipps für den Einstieg</h2>
+
+        <h3>Eine Zahl nach der anderen</h3>
+        <p>Nimm dir eine Zahl vor, etwa die 5, und schau, in welchen Zeilen und Spalten sie schon steht. In einem Block bleibt dann oft nur noch ein einziges Feld übrig, in das sie passt.</p>
+
+        <h3>Fast volle Zeilen zuerst</h3>
+        <p>Fehlen in einer Zeile, Spalte oder einem Block nur noch zwei oder drei Zahlen, ist die Auswahl klein. Prüfe für jedes freie Feld, welche der fehlenden Zahlen dort überhaupt möglich ist.</p>
+
+        <h3>Mögliche Zahlen durchdenken</h3>
+        <p>Bei schweren Rätseln hilft es, für ein einzelnes Feld alle Zahlen durchzugehen, die dort noch stehen könnten. Bleibt nur eine übrig, ist das Feld gelöst.</p>
+
+        <h3>Raten ist nie nötig</h3>
+        <p>Jedes Rätsel hier hat genau eine Lösung. Wenn du an einer Stelle nicht weiterkommst, such woanders weiter. Oft löst eine neue Zahl den Knoten.</p>
+      </section>
+
+      <section>
+        <h2>Die Schwierigkeitsstufen</h2>
+        <p>Die Stufen unterscheiden sich darin, wie viele Zahlen am Anfang schon im Gitter stehen: 40 bei Leicht, 32 bei Mittel und nur 26 bei Schwer. Je weniger vorgegeben ist, desto länger musst du nachdenken, bevor sich die nächste Zahl ergibt.</p>
+      </section>
+
+    </article>
+
+  </main>
 
   <!-- Reihenfolge ist wichtig: erst die Rätsel, dann das Spiel -->
   <script src="raetsel.js"></script>

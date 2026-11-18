@@ -1,15 +1,17 @@
 // ===== Elemente aus dem HTML holen =====
 const spielfeld = document.getElementById("spielfeld");
 const zahlenleiste = document.getElementById("zahlenleiste");
-const schwierigkeit = document.getElementById("schwierigkeit");
-const fehlerSchalter = document.getElementById("fehlerSchalter");
+const stufenKnoepfe = document.querySelectorAll(".stufe");
+const konfliktSchalter = document.getElementById("konfliktSchalter");
 const fehlerAnzeige = document.getElementById("fehler");
 const zeitAnzeige = document.getElementById("zeit");
+const hinweis = document.getElementById("hinweis");
 const meldung = document.getElementById("meldung");
 
 // ===== Spielzustand =====
 const zellen = [];
 let aktuellesRaetsel = null;
+let aktuelleStufe = "leicht";
 let ausgewaehlteZelle = null;
 let fehler = 0;
 let sekunden = 0;
@@ -53,45 +55,123 @@ for (let i = 0; i < 81; i++) {
 
 // ===== Zahlenleiste aufbauen =====
 for (let n = 1; n <= 9; n++) {
-  erstelleTaste(String(n), String(n));
-}
-erstelleTaste("⌫", "");   // Radierer: schreibt "nichts" ins Feld
-
-function erstelleTaste(beschriftung, wert) {
   const taste = document.createElement("button");
   taste.className = "taste";
-  taste.textContent = beschriftung;
-
+  taste.textContent = n;
   taste.addEventListener("click", function () {
-    if (ausgewaehlteZelle !== null && !ausgewaehlteZelle.readOnly) {
-      ausgewaehlteZelle.value = wert;
-      verarbeiteEingabe(ausgewaehlteZelle);
-      ausgewaehlteZelle.focus();
-    }
+    schreibe(String(n));
   });
-
   zahlenleiste.appendChild(taste);
+}
+
+// Der Radierer schreibt "nichts" ins Feld
+document.getElementById("radierer").addEventListener("click", function () {
+  schreibe("");
+});
+
+// Schreibt einen Wert ins ausgewählte Feld (von Zahlenleiste und Radierer benutzt)
+function schreibe(wert) {
+  if (ausgewaehlteZelle !== null && !ausgewaehlteZelle.readOnly) {
+    ausgewaehlteZelle.value = wert;
+    verarbeiteEingabe(ausgewaehlteZelle);
+    ausgewaehlteZelle.focus();
+  }
+}
+
+
+// ===== Schwierigkeit =====
+function setzeStufe(stufe) {
+  aktuelleStufe = stufe;
+  for (const knopf of stufenKnoepfe) {
+    if (knopf.dataset.stufe === stufe) {
+      knopf.classList.add("aktiv");
+      knopf.setAttribute("aria-pressed", "true");
+    } else {
+      knopf.classList.remove("aktiv");
+      knopf.setAttribute("aria-pressed", "false");
+    }
+  }
+}
+
+for (const knopf of stufenKnoepfe) {
+  knopf.addEventListener("click", function () {
+    setzeStufe(knopf.dataset.stufe);
+    neuesRaetsel();
+  });
 }
 
 
 // ===== Eingaben =====
 function verarbeiteEingabe(zelle) {
-  const i = zellen.indexOf(zelle);
-
   if (!"123456789".includes(zelle.value)) {
     zelle.value = "";
   }
 
-  if (zelle.value !== "" && zelle.value !== aktuellesRaetsel.loesung[i]) {
-    zelle.classList.add("falsch");
-    fehler++;
-    zeigeFehler();
-  } else {
-    zelle.classList.remove("falsch");
+  // Das Feld wurde geändert, eine alte Markierung vom Prüfen gilt nicht mehr
+  zelle.classList.remove("falsch");
+  hinweis.textContent = "";
+
+  // Kleine Animation: die Zahl "ploppt" kurz auf (außer der Nutzer will keine Bewegung)
+  const ohneBewegung = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (zelle.value !== "" && !ohneBewegung) {
+    zelle.animate(
+      [{ transform: "scale(1.3)" }, { transform: "scale(1)" }],
+      { duration: 160, easing: "ease-out" }
+    );
   }
 
+  pruefeKonflikte();
   markiere(zelle);
   pruefeGewonnen();
+  speichereSpielstand();
+}
+
+// Liegen zwei Felder in derselben Zeile, Spalte oder demselben Block?
+function liegenZusammen(a, b) {
+  return a.dataset.zeile === b.dataset.zeile ||
+         a.dataset.spalte === b.dataset.spalte ||
+         a.dataset.block === b.dataset.block;
+}
+
+// Markiert alle Felder, deren Zahl in ihrer Zeile, Spalte oder ihrem Block doppelt vorkommt
+function pruefeKonflikte() {
+  for (const z of zellen) {
+    z.classList.remove("konflikt");
+  }
+
+  for (const a of zellen) {
+    if (a.value !== "") {
+      for (const b of zellen) {
+        if (a !== b && a.value === b.value && liegenZusammen(a, b)) {
+          a.classList.add("konflikt");
+        }
+      }
+    }
+  }
+}
+
+// Wird beim Klick auf "Prüfen" aufgerufen
+function pruefen() {
+  let anzahl = 0;
+
+  for (let i = 0; i < 81; i++) {
+    const z = zellen[i];
+    if (!z.readOnly && z.value !== "" && z.value !== aktuellesRaetsel.loesung[i]) {
+      z.classList.add("falsch");
+      anzahl++;
+    }
+  }
+
+  if (anzahl === 0) {
+    hinweis.textContent = "✓ Bisher ist alles richtig!";
+  } else if (anzahl === 1) {
+    hinweis.textContent = "1 falsche Zahl gefunden.";
+  } else {
+    hinweis.textContent = anzahl + " falsche Zahlen gefunden.";
+  }
+
+  fehler += anzahl;
+  zeigeFehler();
   speichereSpielstand();
 }
 
@@ -108,9 +188,7 @@ function markiere(auswahl) {
   for (const z of zellen) {
     z.classList.remove("hervorgehoben", "gleich");
 
-    if (z.dataset.zeile === auswahl.dataset.zeile ||
-        z.dataset.spalte === auswahl.dataset.spalte ||
-        z.dataset.block === auswahl.dataset.block) {
+    if (liegenZusammen(z, auswahl)) {
       z.classList.add("hervorgehoben");
     }
 
@@ -123,7 +201,7 @@ function markiere(auswahl) {
 
 // ===== Rätsel laden =====
 function neuesRaetsel() {
-  const liste = raetselListe[schwierigkeit.value];
+  const liste = raetselListe[aktuelleStufe];
 
   let auswahl;
   do {
@@ -137,6 +215,8 @@ function neuesRaetsel() {
   fehler = 0;
   sekunden = 0;
   geloest = false;
+  spielfeld.classList.remove("geloest");
+  hinweis.textContent = "";
   meldung.textContent = "";
   zeigeFehler();
   zeigeZeit();
@@ -150,7 +230,7 @@ function zeigeRaetsel(eingaben) {
     const zelle = zellen[i];
     const vorgabe = aktuellesRaetsel.raetsel[i];
 
-    zelle.classList.remove("vorgegeben", "falsch", "hervorgehoben", "gleich", "ausgewaehlt");
+    zelle.classList.remove("vorgegeben", "falsch", "konflikt", "hervorgehoben", "gleich", "ausgewaehlt");
 
     if (vorgabe !== "0") {
       zelle.value = vorgabe;
@@ -163,12 +243,10 @@ function zeigeRaetsel(eingaben) {
       } else {
         zelle.value = eingaben[i];
       }
-      if (zelle.value !== "" && zelle.value !== aktuellesRaetsel.loesung[i]) {
-        zelle.classList.add("falsch");
-      }
     }
   }
   ausgewaehlteZelle = null;
+  pruefeKonflikte();
 }
 
 
@@ -187,10 +265,21 @@ function pruefeGewonnen() {
 
 function zeigeGewonnen() {
   clearInterval(timerId);
+  spielfeld.classList.add("geloest");
   for (const z of zellen) {
     z.readOnly = true;
   }
-  meldung.textContent = "🎉 Geschafft in " + zeitAlsText() + "!";
+  let fehlerText;
+  if (fehler === 0) {
+    fehlerText = "ohne Fehler";
+  } else if (fehler === 1) {
+    fehlerText = "mit 1 Fehler";
+  } else {
+    fehlerText = "mit " + fehler + " Fehlern";
+  }
+
+  hinweis.textContent = "";
+  meldung.textContent = "Gelöst in " + zeitAlsText() + ", " + fehlerText + ".";
 }
 
 
@@ -211,27 +300,25 @@ function zeitAlsText() {
 }
 
 function zeigeZeit() {
-  zeitAnzeige.textContent = "⏱ " + zeitAlsText();
+  zeitAnzeige.textContent = zeitAlsText();
 }
 
 
-// ===== Fehleranzeige =====
+// ===== Fehler und Konflikte =====
 function zeigeFehler() {
   fehlerAnzeige.textContent = "Fehler: " + fehler;
 }
 
-function aktualisiereFehlerSchalter() {
-  if (fehlerSchalter.checked) {
-    spielfeld.classList.add("fehler-an");
-    fehlerAnzeige.hidden = false;
+function aktualisiereKonfliktSchalter() {
+  if (konfliktSchalter.checked) {
+    spielfeld.classList.add("konflikte-an");
   } else {
-    spielfeld.classList.remove("fehler-an");
-    fehlerAnzeige.hidden = true;
+    spielfeld.classList.remove("konflikte-an");
   }
 }
 
-fehlerSchalter.addEventListener("change", function () {
-  aktualisiereFehlerSchalter();
+konfliktSchalter.addEventListener("change", function () {
+  aktualisiereKonfliktSchalter();
   speichereSpielstand();
 });
 
@@ -248,13 +335,13 @@ function speichereSpielstand() {
   }
 
   const spielstand = {
-    stufe: schwierigkeit.value,
+    stufe: aktuelleStufe,
     raetsel: aktuellesRaetsel,
     eingaben: eingaben,
     fehler: fehler,
     sekunden: sekunden,
     geloest: geloest,
-    fehlerAnzeigen: fehlerSchalter.checked
+    konflikteAnzeigen: konfliktSchalter.checked
   };
 
   try {
@@ -277,9 +364,9 @@ function ladeSpielstand() {
 }
 
 function stelleWiederHer(stand) {
-  schwierigkeit.value = stand.stufe;
-  fehlerSchalter.checked = stand.fehlerAnzeigen;
-  aktualisiereFehlerSchalter();
+  setzeStufe(stand.stufe);
+  konfliktSchalter.checked = stand.konflikteAnzeigen !== false;   // fehlt der Wert, bleibt der Haken an
+  aktualisiereKonfliktSchalter();
 
   aktuellesRaetsel = stand.raetsel;
   zeigeRaetsel(stand.eingaben);
@@ -300,10 +387,12 @@ function stelleWiederHer(stand) {
 
 // ===== Start =====
 document.getElementById("neuButton").addEventListener("click", neuesRaetsel);
+document.getElementById("pruefenButton").addEventListener("click", pruefen);
 
 const gespeichert = ladeSpielstand();
 if (gespeichert !== null) {
   stelleWiederHer(gespeichert);
 } else {
+  setzeStufe("leicht");
   neuesRaetsel();
 }
